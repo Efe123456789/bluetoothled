@@ -119,11 +119,16 @@
         connectBtn.addEventListener('click', async () => {
             if (!isConnected) {
                 try {
-                    // Bluetooth cihazını ara
-                    device = await navigator.bluetooth.requestDevice({
-                        filters: [{ namePrefix: 'DuoCo' }],
-                        optionalServices: ['0000ffe5-0000-1000-8000-00805f9b34fb', '0000ffe0-0000-1000-8000-00805f9b34fb']
-                    });
+                    // Bluetooth cihazını ara (konum izni gerekli)
+                    if ('bluetooth' in navigator && await navigator.permissions.query({name: 'bluetooth'})) {
+                        device = await navigator.bluetooth.requestDevice({
+                            acceptAllDevices: true,
+                            optionalServices: ['0000ffe5-0000-1000-8000-00805f9b34fb', '0000ffe0-0000-1000-8000-00805f9b34fb']
+                        });
+                    } else {
+                        alert('Bluetooth desteklenmiyor veya konum izni reddedildi!');
+                        return;
+                    }
                     
                     // Bağlantıyı kur
                     const server = await device.gatt.connect();
