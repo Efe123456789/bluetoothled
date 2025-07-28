@@ -52,8 +52,8 @@
         <div class="mb-6 p-4 bg-blue-50 rounded-lg">
             <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="font-medium text-gray-800">Bluetooth Bağlantısı</h3>
-                    <p class="text-sm text-gray-600" id="connection-status">Bağlı değil</p>
+                    <h3 class="font-medium text-gray-800">DuoCo Strip Bağlantısı</h3>
+                    <p class="text-sm text-gray-600" id="connection-status">Bağlı değil (Bluetooth & Konum gerekli)</p>
                 </div>
                 <button id="connect-btn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">Bağlan</button>
             </div>
@@ -105,6 +105,25 @@
         let isConnected = false;
         let device = null;
         
+        // İzin kontrol fonksiyonu
+        async function checkPermissions() {
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('Bluetooth desteklenmiyor');
+                }
+                
+                const permissions = await Promise.all([
+                    navigator.permissions.query({name: 'bluetooth'}),
+                    navigator.permissions.query({name: 'geolocation'})
+                ]);
+                
+                return permissions.every(p => p.state === 'granted');
+            } catch (error) {
+                console.error('İzin kontrol hatası:', error);
+                return false;
+            }
+        }
+        
         // Öğeleri seçme
         const connectBtn = document.getElementById('connect-btn');
         const statusText = document.getElementById('connection-status');
@@ -119,14 +138,25 @@
         connectBtn.addEventListener('click', async () => {
             if (!isConnected) {
                 try {
-                    // Bluetooth cihazını ara (konum izni gerekli)
-                    if ('bluetooth' in navigator && await navigator.permissions.query({name: 'bluetooth'})) {
-                        device = await navigator.bluetooth.requestDevice({
-                            acceptAllDevices: true,
-                            optionalServices: ['0000ffe5-0000-1000-8000-00805f9b34fb', '0000ffe0-0000-1000-8000-00805f9b34fb']
-                        });
-                    } else {
-                        alert('Bluetooth desteklenmiyor veya konum izni reddedildi!');
+                    // Konum ve Bluetooth izinlerini kontrol et
+                    const handlePermissions = async () => {
+                        if ('bluetooth' in navigator) {
+                            const bluetoothStatus = await navigator.permissions.query({name: 'bluetooth'});
+                            const locationStatus = await navigator.permissions.query({name: 'geolocation'});
+                            
+                            if (bluetoothStatus.state === 'granted' && locationStatus.state === 'granted') {
+                                device = await navigator.bluetooth.requestDevice({
+                                    filters: [{ services: ['0000ffe5-0000-1000-8000-00805f9b34fb'] }],
+                                    optionalServices: ['0000ffe5-0000-1000-8000-00805f9b34fb', '0000ffe0-0000-1000-8000-00805f9b34fb']
+                                });
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    if (!await handlePermissions()) {
+                        alert('DuoCo Strip bağlantısı için Bluetooth ve Konum izinleri gereklidir!');
                         return;
                     }
                     
