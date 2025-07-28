@@ -140,19 +140,25 @@
                 try {
                     // Konum ve Bluetooth izinlerini kontrol et
                     const handlePermissions = async () => {
-                        if ('bluetooth' in navigator) {
-                            const bluetoothStatus = await navigator.permissions.query({name: 'bluetooth'});
-                            const locationStatus = await navigator.permissions.query({name: 'geolocation'});
-                            
-                            if (bluetoothStatus.state === 'granted' && locationStatus.state === 'granted') {
-                                device = await navigator.bluetooth.requestDevice({
-                                    filters: [{ services: ['0000ffe5-0000-1000-8000-00805f9b34fb'] }],
-                                    optionalServices: ['0000ffe5-0000-1000-8000-00805f9b34fb', '0000ffe0-0000-1000-8000-00805f9b34fb']
+                        try {
+                            // Explicitly request location permission first
+                            const locationGranted = await navigator.permissions.query({name: 'geolocation'});
+                            if (locationGranted.state !== 'granted') {
+                                await new Promise((resolve, reject) => {
+                                    navigator.geolocation.getCurrentPosition(resolve, reject);
                                 });
-                                return true;
                             }
+
+                            // Then request bluetooth
+                            device = await navigator.bluetooth.requestDevice({
+                                acceptAllDevices: true, // Try to find any device first
+                                optionalServices: ['0000ffe5-0000-1000-8000-00805f9b34fb']
+                            });
+                            return true;
+                        } catch (error) {
+                            console.error('Permission error:', error);
+                            return false;
                         }
-                        return false;
                     };
 
                     if (!await handlePermissions()) {
@@ -185,7 +191,16 @@
                     
                 } catch (error) {
                     console.error('Bağlantı hatası:', error);
-                    alert('Cihaz bulunamadı veya bağlantı başarısız oldu');
+                    let errorMessage = 'Bağlantı hatası oluştu';
+                    if (error.name === 'SecurityError') {
+                        errorMessage = 'Lütfen tarayıcı ayarlarından konum ve bluetooth izinlerini verin';
+                    } else if (error.name === 'NotSupportedError') {
+                        errorMessage = 'Bu tarayıcı Web Bluetooth API desteklemiyor';
+                    } else if (error.name === 'NotFoundError') {
+                        errorMessage = 'DuoCo Strip cihazı bulunamadı. Lütfen cihazın yakında ve açık olduğundan emin olun';
+                    }
+                    statusText.textContent = errorMessage;
+                    alert(errorMessage);
                 }
             } else {
                 // Bağlantıyı kes
