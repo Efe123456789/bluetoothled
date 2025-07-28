@@ -14,7 +14,9 @@
             border: 2px solid #e5e7eb;
         }
         .brightness-slider {
-            -webkit-appearance: none;
+            -webkit-appearance: none; /* Safari ve Chrome için */
+            -moz-appearance: none;    /* Firefox için */
+            appearance: none;         /* Standart özellik */
             width: 100%;
             height: 10px;
             border-radius: 5px;
@@ -22,12 +24,20 @@
             outline: none;
         }
         .brightness-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
+            -webkit-appearance: none; /* Safari ve Chrome için */
             width: 20px;
             height: 20px;
             border-radius: 50%;
             background: #3b82f6;
             cursor: pointer;
+        }
+        .brightness-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
         }
     </style>
 </head>
